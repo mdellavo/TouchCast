@@ -1,0 +1,14 @@
+.DS_STORE
+gen
+bin
+local.properties
+build.xml
+out
+.idea
+res/values/billing.xml
+.gradle
+gradle
+build
+builds
+*.keystore
+*.iml
