@@ -13,8 +13,10 @@
 
     <org.quuux.touchcast.ui.IncantationView
         android:id="@+id/incantation_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        />
 
 
     <org.quuux.touchcast.ui.GestureView

@@ -94,6 +94,8 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         final String playerId = Games.Players.getCurrentPlayerId(mListener.getApiClient());
         final String participantId = mMatch.getParticipantId(playerId);
         mWorld.join(participantId, mListener.getPlayer());
+
+        mViewConfiguration = ViewConfiguration.get(getActivity());
     }
 
     @Override
@@ -279,6 +281,8 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
                 mGestureBuffer.removeLast();
             }
 
+            mIncantationView.addGesture(gesture);
+
             final Spell spell = checkCast();
 
             if (spell != null) {
@@ -286,6 +290,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
                 showCoverText(spell.name);
 
                 mGestureBuffer.clear();
+                mIncantationView.clearGestures();
             }
         }
 

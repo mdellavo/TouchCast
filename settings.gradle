@@ -1,1 +1,2 @@
 include ':touchcast'
+include ':submodules:ViewServer:viewserver'
