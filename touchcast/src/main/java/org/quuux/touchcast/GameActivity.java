@@ -11,6 +11,7 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 
+import com.android.debug.hv.ViewServer;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -68,6 +69,14 @@ public class GameActivity
 
         TileSet.loadDefault(this, this);
         PlayerLoader.loadPlayer(this, this);
+
+        ViewServer.get(this).addWindow(this);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        ViewServer.get(this).removeWindow(this);
     }
 
     private void onShowLobby() {
@@ -98,6 +107,12 @@ public class GameActivity
     protected void onStop() {
         mGoogleApiClient.disconnect();
         super.onStop();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        ViewServer.get(this).setFocusedWindow(this);
     }
 
     @Override

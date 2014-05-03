@@ -289,11 +289,15 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
                 Log.d(TAG, "cast %s!!!", spell.name);
                 showCoverText(spell.name);
 
-                mGestureBuffer.clear();
-                mIncantationView.clearGestures();
+                clearIncandation();
             }
         }
 
+    }
+
+    private void clearIncandation() {
+        mGestureBuffer.clear();
+        mIncantationView.clearGestures();
     }
 
     private void onMyTurn() {
@@ -369,6 +373,8 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
     private android.view.GestureDetector.OnGestureListener mGestureListener = new GestureDetector.SimpleOnGestureListener() {
         @Override
         public boolean onSingleTapUp(final MotionEvent e) {
+            clearIncandation();
+
             final World.Entity entity = mWorldView.setSelection(e.getX(), e.getY());
             Log.d(TAG, "selected %s", entity);
             onEntitySelected(entity);

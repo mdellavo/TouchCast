@@ -43,12 +43,12 @@ public class GestureView extends View {
         mPaint = new Paint();
         mPaint.setAntiAlias(true);
         mPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.ADD));
-        mPaint.setStrokeWidth(32);
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setColor(Color.argb(96, 255, 255, 255));
         mPath = new Path();
+        setStrokeWidth(32);
     }
 
     @Override
@@ -81,4 +81,7 @@ public class GestureView extends View {
         invalidate();
     }
 
+    public void setStrokeWidth(final int width) {
+        mPaint.setStrokeWidth(width);
+    }
 }

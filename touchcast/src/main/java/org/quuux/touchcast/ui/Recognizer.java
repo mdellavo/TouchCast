@@ -168,7 +168,7 @@ public class Recognizer {
     }
 
 
-    static private RectF boundingBox(final PointF[] points) {
+    public static  RectF boundingBox(final PointF[] points) {
         float minX = Float.POSITIVE_INFINITY, maxX = Float.NEGATIVE_INFINITY,
                 minY = Float.POSITIVE_INFINITY, maxY = Float.NEGATIVE_INFINITY;
         for (int i = 0; i < points.length; i++) {
