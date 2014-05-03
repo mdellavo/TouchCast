@@ -30,6 +30,7 @@ import org.quuux.touchcast.util.TileSet;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +59,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
 
     PopupWindow mPopupWindow;
     World.Entity mSelectedEntity;
-    List<Gesture> mGestureBuffer = new ArrayList<Gesture>();
+    LinkedList<Gesture> mGestureBuffer = new LinkedList<Gesture>();
 
     Map<Incantation, Spell> mSpells = new HashMap<Incantation, Spell>();
 
@@ -224,33 +225,57 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         }
     };
 
+    private void addSpell(final String name, final String... gestures) {
+        mSpells.put(new Incantation(gestures), new Spell(name));
+    }
+
     private void initMatch() {
         if (mSpells.size() == 0) {
+            addSpell("fireball", "triangle", "rectangle", "circle");
+            addSpell("summon", "star");
+            addSpell("protect", "pigtail");
+            addSpell("lightning-bolt", "delete", "caret");
+        }
+    }
 
-            final Incantation fireballI = new Incantation(new String[] {
-                    "triangle",
-                    "rectangle",
-                    "circle",
-            });
+    private Spell checkCast(int length) {
 
-            final Spell fireballS = new Spell("fireball");
+        if (length > mGestureBuffer.size())
+            return null;
 
-            mSpells.put(fireballI, fireballS);
+        final List<String> names = new ArrayList<String>();
+
+        for (int i=0; i<length; i++)
+            names.add(mGestureBuffer.get(i).name);
+
+        final Incantation incantation = new Incantation(names.toArray(new String[names.size()]));
+        return mSpells.get(incantation);
+    }
+
+    private Spell checkCast() {
+        for (int i=0; i<4; i++) {
+            final Spell spell = checkCast(i);
+            if (spell != null)
+                return spell;
         }
 
+        return null;
     }
 
     private void onStrokeRecognized(final String name, final float score, final PointF[] points) {
         Log.d(TAG, "recognized: %s (score: %s)", name, score);
         if (name != null) {
-            mGestureBuffer.add(new Gesture(name, score, points));
+            showCoverText(name);
 
-            final List<String> names = new ArrayList<String>();
-            for (Gesture gesture : mGestureBuffer)
-                names.add(gesture.name);
+            final Gesture gesture = new Gesture(name, score, points);
 
-            final Incantation incantation = new Incantation(names.toArray(new String[names.size()]));
-            final Spell spell = mSpells.get(incantation);
+            mGestureBuffer.addFirst(gesture);
+            while (mGestureBuffer.size() > 10) {
+                mGestureBuffer.removeLast();
+            }
+
+            final Spell spell = checkCast();
+
             if (spell != null) {
                 Log.d(TAG, "cast %s!!!", spell.name);
                 showCoverText(spell.name);
