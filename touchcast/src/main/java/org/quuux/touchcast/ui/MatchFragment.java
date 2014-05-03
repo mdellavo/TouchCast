@@ -29,6 +29,7 @@ import org.quuux.touchcast.game.World;
 import org.quuux.touchcast.util.TileSet;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,6 +53,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
 
     WorldView mWorldView;
     GestureView mGestureView;
+    IncantationView mIncantationView;
     TextView mCoverText;
     GestureDetectorCompat mGestureDetector;
     ViewConfiguration mViewConfiguration;
@@ -108,7 +110,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         mCoverText = (TextView)view.findViewById(R.id.cover_text);
         mCoverText.setTypeface(Typeface.createFromAsset(getActivity().getAssets(), "fonts/8bit-wonder.ttf"));
 
-        mViewConfiguration = ViewConfiguration.get(getActivity());
+        mIncantationView = (IncantationView) view.findViewById(R.id.incantation_view);
 
         return view;
     }
@@ -245,15 +247,18 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
 
         final List<String> names = new ArrayList<String>();
 
-        for (int i=0; i<length; i++)
+        for (int i=length-1; i>=0; i--)
             names.add(mGestureBuffer.get(i).name);
 
-        final Incantation incantation = new Incantation(names.toArray(new String[names.size()]));
+        final String[] namesArr = names.toArray(new String[names.size()]);
+        Log.d(TAG, "check cast -> %s", Arrays.toString(namesArr));
+
+        final Incantation incantation = new Incantation(namesArr);
         return mSpells.get(incantation);
     }
 
     private Spell checkCast() {
-        for (int i=0; i<4; i++) {
+        for (int i=1; i<=mGestureBuffer.size(); i++) {
             final Spell spell = checkCast(i);
             if (spell != null)
                 return spell;
@@ -270,7 +275,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
             final Gesture gesture = new Gesture(name, score, points);
 
             mGestureBuffer.addFirst(gesture);
-            while (mGestureBuffer.size() > 10) {
+            while (mGestureBuffer.size() > 4) {
                 mGestureBuffer.removeLast();
             }
 
