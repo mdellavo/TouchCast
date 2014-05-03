@@ -1,3 +1,3 @@
-[submodule "submodules/ViewServer"]
+[submodule "ViewServer"]
 	path = submodules/ViewServer
 	url = https://github.com/romainguy/ViewServer.git
