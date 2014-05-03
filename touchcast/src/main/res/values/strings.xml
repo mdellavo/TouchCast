@@ -14,5 +14,7 @@
     <string name="match_complete">Match Complete</string>
     <string name="their_turn">Waiting</string>
     <string name="your_turn">Your Turn</string>
+    <string name="cast">Cast</string>
+    <string name="select_target">Select Target</string>
 
 </resources>

@@ -9,6 +9,7 @@ public class Player implements Serializable {
 
     public String name;
     public int stamina;
+    public int timeUnits;
 
     public int experience;
     public int deaths;

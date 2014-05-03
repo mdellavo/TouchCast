@@ -1,16 +1,19 @@
 package org.quuux.touchcast.ui;
 
 import android.app.Activity;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.GestureDetectorCompat;
+import android.util.Pair;
 import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -26,6 +29,9 @@ import org.quuux.touchcast.game.World;
 import org.quuux.touchcast.util.TileSet;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MatchFragment extends Fragment implements View.OnTouchListener {
 
@@ -46,9 +52,15 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
     WorldView mWorldView;
     GestureView mGestureView;
     TextView mCoverText;
-    Recognizer mRecognizer = new Recognizer();
     GestureDetectorCompat mGestureDetector;
+    ViewConfiguration mViewConfiguration;
+    Recognizer mRecognizer = new Recognizer();
 
+    PopupWindow mPopupWindow;
+    World.Entity mSelectedEntity;
+    List<Gesture> mGestureBuffer = new ArrayList<Gesture>();
+
+    Map<Incantation, Spell> mSpells = new HashMap<Incantation, Spell>();
 
     protected MatchFragment() {
         super();
@@ -95,12 +107,16 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         mCoverText = (TextView)view.findViewById(R.id.cover_text);
         mCoverText.setTypeface(Typeface.createFromAsset(getActivity().getAssets(), "fonts/8bit-wonder.ttf"));
 
+        mViewConfiguration = ViewConfiguration.get(getActivity());
+
         return view;
     }
 
     @Override
     public void onResume() {
         super.onResume();
+
+        initMatch();
 
         final int matchStatus = mMatch.getStatus();
 
@@ -168,15 +184,17 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
 
         void complete() {
             if(mCurrentStroke.size() > 8) {
-                Recognizer.UniStroke u = mRecognizer.recognize(getPoints(), true);
-                if (u != null) {
-                    Log.d(TAG, "recognized: %s", u.name);
+                Pair<Recognizer.UniStroke, Float> result = mRecognizer.recognize(getPoints(), true);
+                if (result != null) {
+                    onStrokeRecognized(result.first.name, result.second, getPoints());
                 }
             }
         }
 
         @Override
         public boolean onTouch(final View view, final MotionEvent motionEvent) {
+
+            dismissPopup();
 
             switch (motionEvent.getAction()) {
 
@@ -197,12 +215,51 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
 
             }
 
-            if (mCurrentStroke.size() > 4)
-                mGestureView.plot(Recognizer.resample(getPoints(), Recognizer.NUM_POINTS));
+            final PointF[] points = getPoints();
+            if (Recognizer.pathLength(points) > mViewConfiguration.getScaledTouchSlop() * 2) {
+                mGestureView.plot(Recognizer.resample(points, Recognizer.NUM_POINTS));
+            }
 
             return true;
         }
     };
+
+    private void initMatch() {
+        if (mSpells.size() == 0) {
+
+            final Incantation fireballI = new Incantation(new String[] {
+                    "triangle",
+                    "rectangle",
+                    "circle",
+            });
+
+            final Spell fireballS = new Spell("fireball");
+
+            mSpells.put(fireballI, fireballS);
+        }
+
+    }
+
+    private void onStrokeRecognized(final String name, final float score, final PointF[] points) {
+        Log.d(TAG, "recognized: %s (score: %s)", name, score);
+        if (name != null) {
+            mGestureBuffer.add(new Gesture(name, score, points));
+
+            final List<String> names = new ArrayList<String>();
+            for (Gesture gesture : mGestureBuffer)
+                names.add(gesture.name);
+
+            final Incantation incantation = new Incantation(names.toArray(new String[names.size()]));
+            final Spell spell = mSpells.get(incantation);
+            if (spell != null) {
+                Log.d(TAG, "cast %s!!!", spell.name);
+                showCoverText(spell.name);
+
+                mGestureBuffer.clear();
+            }
+        }
+
+    }
 
     private void onMyTurn() {
         showCoverText(R.string.your_turn);
@@ -228,31 +285,61 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         mWorldView.disable();
     }
 
-    private void onShowPlayer(final World.PlayerEntity player) {
+    private void dismissPopup() {
+        if (mPopupWindow != null && mPopupWindow.isShowing()) {
+            mPopupWindow.dismiss();
+            mPopupWindow = null;
+        }
+    }
+
+    private void onShowEntity(final World.Entity entity) {
+
         final LayoutInflater inflater = getActivity().getLayoutInflater();
         final View view = inflater.inflate(R.layout.player_popup, null, false);
         final TextView playerName = (TextView)view.findViewById(R.id.player_name);
-        playerName.setText(player.getPlayer().name);
-        final PopupWindow popupWindow = new PopupWindow(getActivity());
-        popupWindow.setContentView(view);
-        popupWindow.showAtLocation(mWorldView, Gravity.NO_GRAVITY, 0, 0);
+
+        playerName.setText(entity.getName());
+        mPopupWindow = new PopupWindow(getActivity());
+        mPopupWindow.setHeight(400);
+        mPopupWindow.setWidth(400);
+        mPopupWindow.setContentView(view);
+
+        final TileSet tileset = mListener.getTileSet();
+        final Point translation = mWorldView.getMapTranslation();
+        final float scale = mWorldView.getMapScale();
+        mPopupWindow.showAtLocation(
+                mWorldView,
+                Gravity.NO_GRAVITY,
+                Math.round(tileset.getTileSize() * entity.getX() * scale) + translation.x,
+                Math.round(tileset.getTileSize() * entity.getY() * scale) + translation.y
+        );
+
+        Log.d(TAG, "popup = %s", mPopupWindow);
+    }
+
+    private void onEntitySelected(final World.Entity entity) {
+        mSelectedEntity = entity;
+        showCoverText(entity != null ? R.string.cast : R.string.select_target);
+    }
+
+    void showCoverText(final String string) {
+        mCoverText.setText(string);
+        mCoverText.setVisibility(View.VISIBLE);
     }
 
     void showCoverText(final int resId) {
-        mCoverText.setText(resId);
-        mCoverText.setVisibility(View.VISIBLE);
+        showCoverText(getString(resId));
     }
 
     private android.view.GestureDetector.OnGestureListener mGestureListener = new GestureDetector.SimpleOnGestureListener() {
         @Override
         public boolean onSingleTapUp(final MotionEvent e) {
-            World.Entity entity = mWorldView.setSelection(e.getX(), e.getY());
-            if (entity != null) {
-                Log.d(TAG, "selected %s", entity);
+            final World.Entity entity = mWorldView.setSelection(e.getX(), e.getY());
+            Log.d(TAG, "selected %s", entity);
+            onEntitySelected(entity);
 
-                if (entity instanceof World.PlayerEntity)
-                    onShowPlayer((World.PlayerEntity) entity);
-            }
+            mGestureView.clear();
+
             return true;
         }
 
@@ -295,5 +382,60 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
             return super.onSingleTapConfirmed(e);
         }
     };
+
+    class Gesture {
+        final String name;
+        final float score;
+        final PointF[] points;
+
+        public Gesture(final String name, final float score, final PointF[] points) {
+            this.name = name;
+            this.score = score;
+            this.points = points;
+        }
+    }
+
+    class Incantation {
+
+        final String[] mGestures;
+
+        public Incantation(final String[] gestures) {
+            mGestures = gestures;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+
+            if (o == null || !(o instanceof Incantation))
+                return false;
+
+            final Incantation other = (Incantation)o;
+
+            if (other.mGestures.length != mGestures.length)
+                return false;
+
+            for (int i=0; i<mGestures.length; i++)
+                if (!mGestures[i].equals(other.mGestures[i]))
+                    return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int rv = 1;
+            for (String gesture : mGestures)
+                rv = rv * 31 + gesture.hashCode();
+            return rv;
+        }
+    }
+
+    class Spell {
+        final String name;
+
+        public Spell(final String name) {
+            this.name = name;
+        }
+    }
 
 }

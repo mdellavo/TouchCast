@@ -3,6 +3,7 @@ package org.quuux.touchcast.ui;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -20,6 +21,7 @@ public class WorldView extends View {
     float mScale = 1;
     Point mTranslation = new Point(0, 0);
     boolean mDisabled;
+    World.Entity mSelectedEntity;
 
     public WorldView(final Context context) {
         super(context);
@@ -70,8 +72,9 @@ public class WorldView extends View {
             }
         }
 
-        if (mSelectedTile.x>-1 && mSelectedTile.y>-1) {
-            mTileset.drawTile(canvas, "selector", mSelectedTile.x, mSelectedTile.y);
+        if (hasSelection()) {
+            final String key = mSelectedEntity != null ? "target" : "selector";
+            mTileset.drawTile(canvas, key, mSelectedTile.x, mSelectedTile.y);
         }
 
         for (World.Entity e : mWorld.getEntities()) {
@@ -88,8 +91,15 @@ public class WorldView extends View {
         if (mDisabled)
             return;
 
-        mSelectedTile.x = mSelectedTile.y = -1;
-        invalidate();
+        if (hasSelection()) {
+            mSelectedTile.x = mSelectedTile.y = -1;
+            mSelectedEntity = null;
+            invalidate();
+        }
+    }
+
+    public boolean hasSelection() {
+        return mSelectedTile.x > -1 && mSelectedTile.y > -1;
     }
 
     public World.Entity setSelection(float x, float y) {
@@ -112,7 +122,9 @@ public class WorldView extends View {
         Log.d(TAG, "selecting tile %s", mSelectedTile);
         invalidate();
 
-        return mWorld.scanEntity(mSelectedTile.x, mSelectedTile.y);
+        mSelectedEntity = mWorld.scanEntity(mSelectedTile.x, mSelectedTile.y);
+
+        return mSelectedEntity;
     }
 
     public void disable() {
@@ -121,5 +133,13 @@ public class WorldView extends View {
 
     public void enable() {
         mDisabled = false;
+    }
+
+    public Point getMapTranslation() {
+        return mTranslation;
+    }
+
+    public float getMapScale() {
+        return mScale;
     }
 }

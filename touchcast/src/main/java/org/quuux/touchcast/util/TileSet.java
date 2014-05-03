@@ -66,7 +66,7 @@ public class TileSet {
         if (tile != null) {
             mSrc.set(rect);
             mDst.set(x * mSize, y*mSize, (x + 1) * mSize, (y + 1) * mSize);
-            Log.d(TAG, "(x,y)=%s,%s | src=%s %sx%s | dst=%s %sx%s", x, y, mSrc, mSrc.width(), mSrc.height(), mDst, mDst.width(), mDst.height());
+            //Log.d(TAG, "(x,y)=%s,%s | src=%s %sx%s | dst=%s %sx%s", x, y, mSrc, mSrc.width(), mSrc.height(), mDst, mDst.width(), mDst.height());
             canvas.drawBitmap(mBitmap, mSrc, mDst, mPaint);
         }
     }
@@ -123,6 +123,9 @@ public class TileSet {
                 tileSet.setTile("grass", 9, 23);
                 tileSet.setTile("player", 9, 3);
                 tileSet.setTile("selector", 65, 1);
+                tileSet.setTile("target", 105, 1);
+                tileSet.setTile("beast-orange", 39, 14);
+
 
                 if (listener != null)
                     listener.onTileSetLoaded(tileSet);

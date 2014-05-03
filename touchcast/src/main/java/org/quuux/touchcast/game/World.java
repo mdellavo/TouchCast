@@ -47,17 +47,15 @@ public class World implements Serializable {
     public interface Entity {
         int getX();
         int getY();
+        void setX(int x);
+        void setY(int y);
         String getTile();
+        String getName();
     }
 
-    public class PlayerEntity implements Entity, Serializable {
+    public abstract class BaseEntity implements Entity, Serializable {
 
-        final Player mPlayer;
         int x,y;
-
-        public PlayerEntity(final Player player) {
-            mPlayer = player;
-        }
 
         @Override
         public int getX() {
@@ -70,12 +68,57 @@ public class World implements Serializable {
         }
 
         @Override
+        public void setX(final int x) {
+            this.x = x;
+        }
+
+        @Override
+        public void setY(final int y) {
+            this.y = y;
+        }
+    }
+
+    public class PlayerEntity extends BaseEntity {
+
+        final Player mPlayer;
+
+        public PlayerEntity(final Player player) {
+            mPlayer = player;
+        }
+
+        @Override
         public String getTile() {
             return mPlayer.tileKey;
         }
 
+        @Override
+        public String getName() {
+            return mPlayer.name;
+        }
+
         public Player getPlayer() {
             return mPlayer;
+        }
+    }
+
+    public class NonPlayerEntity extends BaseEntity {
+
+        private final String mTileKey;
+        private final String mName;
+
+        public NonPlayerEntity(final String name, final String tileKey) {
+            mName = name;
+            mTileKey = tileKey;
+        }
+
+        @Override
+        public String getTile() {
+            return mTileKey;
+        }
+
+        @Override
+        public String getName() {
+            return mName;
         }
     }
 
@@ -126,6 +169,9 @@ public class World implements Serializable {
 
         world.setMap(MapLoader.loadDefault());
 
+        for (int i=0; i<5; i++)
+            world.addNonPlayerEntity();
+
         return world;
     }
 
@@ -139,14 +185,33 @@ public class World implements Serializable {
         return world;
     }
 
+    private void placeEntity(final Entity entity) {
+        boolean placed = false;
+        while(!placed) {
+            final int x = mRandom.nextInt(getWidth());
+            final int y = mRandom.nextInt(getHeight());
+            if (scanEntity(x, y) == null) {
+                placed = true;
+                entity.setX(x);
+                entity.setY(y);
+                Log.d(TAG, "placed at %s,%s", x, y);
+            }
+        }
+    }
+
     public void join(final String particiapntId, final Player player) {
         if (!mPlayers.containsKey(particiapntId))
             mPlayers.put(particiapntId, player);
 
         final PlayerEntity playerEntity = new PlayerEntity(player);
-        playerEntity.x = mRandom.nextInt(getWidth());
-        playerEntity.y = mRandom.nextInt(getHeight());
+        placeEntity(playerEntity);
         mEntities.add(playerEntity);
+    }
+
+    public void addNonPlayerEntity() {
+        final NonPlayerEntity npc = new NonPlayerEntity("Orange Beast", "beast-orange");
+        placeEntity(npc);
+        mEntities.add(npc);
     }
 
 

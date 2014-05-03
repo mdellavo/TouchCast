@@ -2,6 +2,7 @@ package org.quuux.touchcast.ui;
 
 import android.graphics.PointF;
 import android.graphics.RectF;
+import android.util.Pair;
 
 import org.quuux.touchcast.GameActivity;
 import org.quuux.touchcast.Log;
@@ -45,7 +46,7 @@ public class Recognizer {
         init();
     }
 
-    UniStroke recognize(PointF[] rawPoints, final boolean useProtractor) {
+    Pair<UniStroke, Float> recognize(PointF[] rawPoints, final boolean useProtractor) {
 
         PointF[] points = resample(rawPoints, NUM_POINTS);
 
@@ -78,7 +79,9 @@ public class Recognizer {
             }
         }
 
-        return (u == -1) ? null : mUnistrokes.get(u);
+        final float score = (u == -1) ? 0 : 1f / b;
+        final UniStroke stroke = mUnistrokes.get(u);
+        return new Pair<UniStroke, Float>(stroke, score);
 
     }
 
