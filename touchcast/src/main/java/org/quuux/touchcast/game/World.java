@@ -215,6 +215,7 @@ public class World implements Serializable {
             final PlayerEntity playerEntity = new PlayerEntity(player);
             placeEntity(playerEntity);
             mEntities.add(playerEntity);
+
         }
     }
 

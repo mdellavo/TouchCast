@@ -128,6 +128,7 @@ public class WorldView extends View {
     }
 
     public void disable() {
+        clearSelection();
         mDisabled = true;
         invalidate();
     }

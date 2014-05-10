@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.GestureDetectorCompat;
@@ -30,6 +31,7 @@ import org.quuux.touchcast.R;
 import org.quuux.touchcast.game.Player;
 import org.quuux.touchcast.game.World;
 import org.quuux.touchcast.util.TileSet;
+import org.quuux.touchcast.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -126,13 +128,13 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
         mHealthView.setColor(Color.parseColor("#cc0000"));
         mHealthView.setLabel("Health %s");
         mHealthView.setLabelColor(Color.parseColor("#cccccc"));
-        mHealthView.update(.82f);
+        mHealthView.update(1);
 
         mTimeUnitsView = (MeterView) view.findViewById(R.id.time_units);
         mTimeUnitsView.setColor(Color.parseColor("#0000cc"));
-        mTimeUnitsView.setLabel("Time Units %s");
+        mTimeUnitsView.setLabel("Mana %s");
         mTimeUnitsView.setLabelColor(Color.parseColor("#cccccc"));
-        mTimeUnitsView.update(.48f);
+        mTimeUnitsView.update(1);
 
         mEndTurnButton = (Button) view.findViewById(R.id.end_turn);
         mEndTurnButton.setOnClickListener(this);
@@ -175,6 +177,12 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
                 onMatchExpired();
                 break;
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        dismissPopup();
     }
 
     @Override
@@ -274,6 +282,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
         final String nextParticipantId = participantIds.get((current + 1) % participantIds.size());
 
         Games.TurnBasedMultiplayer.takeTurn(mListener.getApiClient(), mMatch.getMatchId(), mWorld.serialize(), nextParticipantId);
+
         onTheirTurn();
     }
 
@@ -336,46 +345,55 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
             if (spell != null) {
                 Log.d(TAG, "cast %s!!!", spell.name);
                 showCoverText(spell.name);
-
-                clearIncandation();
+                clearIncantation();
             }
         }
 
     }
 
-    private void clearIncandation() {
+    private void enableWorld() {
+        mWorldView.enable();
+        mEndTurnButton.setEnabled(true);
+        mWorldView.setOnTouchListener(this);
+
+    }
+
+    private void disableWorld() {
+        mWorldView.disable();
+        mEndTurnButton.setEnabled(false);
+        mWorldView.setOnTouchListener(null);
+        mGestureView.clear();
+        dismissPopup();
+    }
+
+    private void clearIncantation() {
         mGestureBuffer.clear();
         mIncantationView.clearGestures();
     }
 
     private void onMyTurn() {
         showCoverText(R.string.your_turn);
-        mWorldView.enable();
-        mEndTurnButton.setEnabled(true);
-        mWorldView.setOnTouchListener(this);
+        enableWorld();
     }
 
     private void onTheirTurn() {
         showCoverText(R.string.their_turn);
-        mWorldView.disable();
-        mEndTurnButton.setEnabled(false);
-        mWorldView.setOnTouchListener(null);
-        mGestureView.clear();
+        disableWorld();
     }
 
     private void onMatchExpired() {
         showCoverText(R.string.match_expired);
-        mWorldView.disable();
+        disableWorld();
     }
 
     private void onMatchComplete() {
         showCoverText(R.string.match_complete);
-        mWorldView.disable();
+        disableWorld();
     }
 
     private void onMatchCanceled() {
         showCoverText(R.string.match_canceled);
-        mWorldView.disable();
+        disableWorld();
     }
 
     private void dismissPopup() {
@@ -390,12 +408,17 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
         final LayoutInflater inflater = getActivity().getLayoutInflater();
         final View view = inflater.inflate(R.layout.player_popup, null, false);
         final TextView playerName = (TextView)view.findViewById(R.id.player_name);
+        final ImageView avatar = (ImageView)view.findViewById(R.id.avatar);
+
+        avatar.setImageBitmap(mListener.getTileSet().getTile(entity.getTile()));
 
         playerName.setText(entity.getName());
         mPopupWindow = new PopupWindow(getActivity());
-        mPopupWindow.setHeight(400);
-        mPopupWindow.setWidth(400);
+        mPopupWindow.setHeight(Utils.dpToPx(getActivity(), 96));
+        mPopupWindow.setWidth(Utils.dpToPx(getActivity(), 256));
         mPopupWindow.setContentView(view);
+        mPopupWindow.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#44333333")));
+        mPopupWindow.setAnimationStyle(R.style.PopupAnimation);
 
         final TileSet tileset = mListener.getTileSet();
         final Point translation = mWorldView.getMapTranslation();
@@ -413,6 +436,12 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
     private void onEntitySelected(final World.Entity entity) {
         mSelectedEntity = entity;
         showCoverText(entity != null ? R.string.cast : R.string.select_target);
+
+        if (entity != null &&
+                !(entity instanceof World.PlayerEntity &&
+                        ((World.PlayerEntity)entity).getPlayer().uuid.equals(mListener.getPlayer().uuid))) {
+            onShowEntity(entity);
+        }
     }
 
     void showCoverText(final String string) {
@@ -427,7 +456,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
     private android.view.GestureDetector.OnGestureListener mGestureListener = new GestureDetector.SimpleOnGestureListener() {
         @Override
         public boolean onSingleTapUp(final MotionEvent e) {
-            clearIncandation();
+            clearIncantation();
 
             final World.Entity entity = mWorldView.setSelection(e.getX(), e.getY());
             Log.d(TAG, "selected %s", entity);
