@@ -1,6 +1,7 @@
 package org.quuux.touchcast.ui;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Typeface;
@@ -15,6 +16,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 
@@ -35,7 +38,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public class MatchFragment extends Fragment implements View.OnTouchListener {
+public class MatchFragment extends Fragment implements View.OnTouchListener, View.OnClickListener {
 
     private static final String TAG = Log.buildTag(MatchFragment.class);
 
@@ -43,7 +46,6 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         Player getPlayer();
         TileSet getTileSet();
         GoogleApiClient getApiClient();
-
     }
 
     Listener mListener;
@@ -54,6 +56,11 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
     WorldView mWorldView;
     GestureView mGestureView;
     IncantationView mIncantationView;
+    ImageView mAvatarView;
+    MeterView mHealthView, mTimeUnitsView;
+
+    Button mEndTurnButton;
+
     TextView mCoverText;
     GestureDetectorCompat mGestureDetector;
     ViewConfiguration mViewConfiguration;
@@ -72,7 +79,6 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
     @Override
     public void onAttach(final Activity activity) {
         super.onAttach(activity);
-
         try {
             mListener = (Listener) activity;
         } catch (ClassCastException e) {
@@ -105,7 +111,6 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         mWorldView = (WorldView) view.findViewById(R.id.world);
         mWorldView.setWorld(mWorld);
         mWorldView.setTileSet(mListener.getTileSet());
-        mWorldView.setOnTouchListener(this);
 
         mGestureView = (GestureView)view.findViewById(R.id.gesture_view);
 
@@ -113,6 +118,24 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
         mCoverText.setTypeface(Typeface.createFromAsset(getActivity().getAssets(), "fonts/8bit-wonder.ttf"));
 
         mIncantationView = (IncantationView) view.findViewById(R.id.incantation_view);
+
+        mAvatarView = (ImageView) view.findViewById(R.id.avatar);
+        mAvatarView.setImageBitmap(mListener.getTileSet().getTile(mListener.getPlayer().tileKey));
+
+        mHealthView = (MeterView) view.findViewById(R.id.health);
+        mHealthView.setColor(Color.parseColor("#cc0000"));
+        mHealthView.setLabel("Health %s");
+        mHealthView.setLabelColor(Color.parseColor("#cccccc"));
+        mHealthView.update(.82f);
+
+        mTimeUnitsView = (MeterView) view.findViewById(R.id.time_units);
+        mTimeUnitsView.setColor(Color.parseColor("#0000cc"));
+        mTimeUnitsView.setLabel("Time Units %s");
+        mTimeUnitsView.setLabelColor(Color.parseColor("#cccccc"));
+        mTimeUnitsView.update(.48f);
+
+        mEndTurnButton = (Button) view.findViewById(R.id.end_turn);
+        mEndTurnButton.setOnClickListener(this);
 
         return view;
     }
@@ -156,6 +179,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
 
     @Override
     public boolean onTouch(final View v, final MotionEvent event) {
+
         boolean rv = mGestureDetector.onTouchEvent(event);
         if (!rv)
             rv = mUniStrokeListener.onTouch(v, event);
@@ -228,6 +252,30 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
             return true;
         }
     };
+
+    @Override
+    public void onClick(final View v) {
+        switch (v.getId()) {
+            case R.id.end_turn:
+                endTurn();
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private void endTurn() {
+        final List<String> participantIds = mMatch.getParticipantIds();
+
+        final String playerId = Games.Players.getCurrentPlayerId(mListener.getApiClient());
+        final String participantId = mMatch.getParticipantId(playerId);
+        final int current = participantIds.indexOf(participantId);
+        final String nextParticipantId = participantIds.get((current + 1) % participantIds.size());
+
+        Games.TurnBasedMultiplayer.takeTurn(mListener.getApiClient(), mMatch.getMatchId(), mWorld.serialize(), nextParticipantId);
+        onTheirTurn();
+    }
 
     private void addSpell(final String name, final String... gestures) {
         mSpells.put(new Incantation(gestures), new Spell(name));
@@ -302,11 +350,17 @@ public class MatchFragment extends Fragment implements View.OnTouchListener {
 
     private void onMyTurn() {
         showCoverText(R.string.your_turn);
+        mWorldView.enable();
+        mEndTurnButton.setEnabled(true);
+        mWorldView.setOnTouchListener(this);
     }
 
     private void onTheirTurn() {
         showCoverText(R.string.their_turn);
         mWorldView.disable();
+        mEndTurnButton.setEnabled(false);
+        mWorldView.setOnTouchListener(null);
+        mGestureView.clear();
     }
 
     private void onMatchExpired() {

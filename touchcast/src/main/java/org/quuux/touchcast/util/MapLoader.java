@@ -7,7 +7,7 @@ public class MapLoader {
 
    public static WorldMap loadDefault() {
 
-       final WorldMap map = new WorldMap(11, 11);
+       final WorldMap map = new WorldMap(15, 15);
 
        final Tile[] tiles = new Tile[] {
                new Tile("grass")

@@ -61,6 +61,14 @@ public class TileSet {
         tile.set(x * mSize, y * mSize, (x + 1) * mSize, (y + 1) * mSize);
     }
 
+    public Bitmap getTile(final String tile) {
+        final Rect rect = mTiles.get(tile);
+        if (rect != null)
+            return Bitmap.createBitmap(mBitmap, rect.left, rect.top, mSize, mSize);
+
+        return null;
+    }
+
     public void drawTile(final Canvas canvas, final String tile, int x, int y) {
         final Rect rect = mTiles.get(tile);
         if (tile != null) {

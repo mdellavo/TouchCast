@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
 import org.quuux.touchcast.Log;
+import org.quuux.touchcast.util.Utils;
 
 import java.util.Arrays;
 
@@ -28,7 +29,7 @@ public class IncantationView extends LinearLayout {
 //    }
 
     public void addGesture(final MatchFragment.Gesture gesture) {
-        int size = 200;
+        int size = Utils.dpToPx(getContext(), 50);
 
         final GestureView gesturedView = new GestureView(getContext());
         gesturedView.setLayoutParams(new LinearLayout.LayoutParams(size, size));

@@ -5,11 +5,13 @@ import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ComposeShader;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.SweepGradient;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -47,6 +49,8 @@ public class GestureView extends View {
         mPaint.setStrokeCap(Paint.Cap.ROUND);
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setColor(Color.argb(96, 255, 255, 255));
+        mPaint.setShader(new SweepGradient(getWidth()/2, getHeight()/2, Color.RED, Color.BLUE));
+
         mPath = new Path();
         setStrokeWidth(32);
     }

@@ -140,7 +140,12 @@ public class World implements Serializable {
             final GZIPOutputStream zout = new GZIPOutputStream(out);
             final ObjectOutputStream objectOut = new ObjectOutputStream(zout);
             objectOut.writeObject(this);
-            return out.toByteArray();
+            objectOut.close();
+            zout.close();
+            out.close();
+            final byte[] data = out.toByteArray();
+            Log.d(TAG, "serialized world to %d bytes", data.length);
+            return data;
         } catch (IOException e) {
             Log.d(TAG, "error serializing world: %s", e);
         }
@@ -150,15 +155,19 @@ public class World implements Serializable {
 
     public static World unserialize(final byte[] data) {
         try {
-
+            Log.d(TAG, "unserializing %d bytes", data.length);
             final ByteArrayInputStream in = new ByteArrayInputStream(data);
             final GZIPInputStream zin = new GZIPInputStream(in);
             final ObjectInputStream objectIn = new ObjectInputStream(zin);
-            return (World) objectIn.readObject();
+            final World rv =  (World) objectIn.readObject();
+            objectIn.close();
+            zin.close();
+            in.close();
+            return rv;
         } catch (IOException e) {
-            Log.d(TAG, "error unserializing world: %s", e);
+            Log.e(TAG, "error unserializing world", e);
         } catch (ClassNotFoundException e) {
-            Log.d(TAG, "error unserializing world: %s", e);
+            Log.e(TAG, "error unserializing world", e);
         }
 
         return null;
@@ -200,12 +209,13 @@ public class World implements Serializable {
     }
 
     public void join(final String particiapntId, final Player player) {
-        if (!mPlayers.containsKey(particiapntId))
+        if (!mPlayers.containsKey(particiapntId)) {
             mPlayers.put(particiapntId, player);
 
-        final PlayerEntity playerEntity = new PlayerEntity(player);
-        placeEntity(playerEntity);
-        mEntities.add(playerEntity);
+            final PlayerEntity playerEntity = new PlayerEntity(player);
+            placeEntity(playerEntity);
+            mEntities.add(playerEntity);
+        }
     }
 
     public void addNonPlayerEntity() {

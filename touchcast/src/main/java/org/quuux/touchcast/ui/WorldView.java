@@ -129,10 +129,12 @@ public class WorldView extends View {
 
     public void disable() {
         mDisabled = true;
+        invalidate();
     }
 
     public void enable() {
         mDisabled = false;
+        invalidate();
     }
 
     public Point getMapTranslation() {
