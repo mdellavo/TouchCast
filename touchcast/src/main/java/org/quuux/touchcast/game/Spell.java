@@ -1,9 +1,8 @@
 package org.quuux.touchcast.game;
 
-/**
-* Created by marc on 5/10/14.
-*/
-public class Spell {
+import java.io.Serializable;
+
+public class Spell implements Serializable {
     final String mName;
 
     public Spell(final String name) {

@@ -1,7 +1,5 @@
 package org.quuux.touchcast.game;
 
-import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMatch;
-
 import org.quuux.touchcast.Log;
 import org.quuux.touchcast.util.MapLoader;
 
@@ -13,6 +11,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -75,6 +74,7 @@ public class World implements Serializable {
         public void setY(final int y) {
             this.y = y;
         }
+
     }
 
     public class PlayerEntity extends BaseEntity {
@@ -122,20 +122,13 @@ public class World implements Serializable {
     }
 
     public interface Action {
-
-    }
-
-    class SpellAction implements Action {
-        private final Spell mSpell;
-
-        public SpellAction(final Spell spell) {
-            mSpell = spell;
-        }
+        public void execute();
     }
 
     Map<String, Player> mPlayers = new HashMap<String, Player>();
     List<String> mParticipantOrder = new ArrayList<String>();
-    List<Entity> mEntities = new ArrayList<Entity>();
+    List<Entity> mEntities = new LinkedList<Entity>();
+    Map<Player, Entity> mPlayerEntities = new HashMap<Player, Entity>();
     List<Action> mActionJournal = new ArrayList<Action>();
 
     WorldMap mMap;
@@ -152,13 +145,14 @@ public class World implements Serializable {
             final ObjectOutputStream objectOut = new ObjectOutputStream(zout);
             objectOut.writeObject(this);
             objectOut.close();
+            zout.finish();
             zout.close();
             out.close();
             final byte[] data = out.toByteArray();
             Log.d(TAG, "serialized world to %d bytes", data.length);
             return data;
         } catch (IOException e) {
-            Log.d(TAG, "error serializing world: %s", e);
+            Log.e(TAG, "error serializing world", e);
         }
 
         return null;
@@ -199,12 +193,6 @@ public class World implements Serializable {
         mMap = map;
     }
 
-    public static World getInstance(TurnBasedMatch match) {
-        final byte[] data = match.getData();
-        final World world = data != null ? unserialize(data) : generate();
-        return world;
-    }
-
     private void placeEntity(final Entity entity) {
         boolean placed = false;
         while(!placed) {
@@ -226,6 +214,8 @@ public class World implements Serializable {
             final PlayerEntity playerEntity = new PlayerEntity(player);
             placeEntity(playerEntity);
             mEntities.add(playerEntity);
+
+            mPlayerEntities.put(player, playerEntity);
         }
     }
 
@@ -274,8 +264,12 @@ public class World implements Serializable {
         return null;
     }
 
-    public void castSpell(final Spell spell) {
-        final SpellAction action = new SpellAction(spell);
+    public List<Action> getJournal() {
+        return mActionJournal;
+    }
+
+    public void castSpell(final Player player, final Spell spell, final Entity target) {
+        final SpellAction action = new SpellAction(mPlayerEntities.get(player), spell, target);
         mActionJournal.add(action);
     }
 

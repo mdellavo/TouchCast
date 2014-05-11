@@ -4,6 +4,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
@@ -19,12 +20,23 @@ import com.google.android.gms.games.Games;
 import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMatch;
 
 import org.quuux.touchcast.game.Player;
+import org.quuux.touchcast.game.World;
 import org.quuux.touchcast.ui.GestureView;
+import org.quuux.touchcast.ui.LoadingFragment;
 import org.quuux.touchcast.ui.MatchFragment;
 import org.quuux.touchcast.ui.LobbyFragment;
 import org.quuux.touchcast.ui.Recognizer;
 import org.quuux.touchcast.util.PlayerLoader;
 import org.quuux.touchcast.util.TileSet;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 
 public class GameActivity
@@ -33,7 +45,8 @@ public class GameActivity
                    GoogleApiClient.OnConnectionFailedListener,
                    LobbyFragment.Listener,
                    MatchFragment.Listener,
-                   TileSet.LoadListener, PlayerLoader.LoadListener {
+                   TileSet.LoadListener,
+                   PlayerLoader.LoadListener {
 
     private static final String TAG = Log.buildTag(GameActivity.class);
 
@@ -42,6 +55,7 @@ public class GameActivity
     private static final String STATE_RESOLVING_ERROR = "resolving_error";
     private static final String FRAG_LOBBY = "lobby";
     private static final String FRAG_GAME = "game";
+    private static final String FRAG_LOADING = "loading";
 
     Recognizer mRecognizer = new Recognizer();
     GestureView mContentView;
@@ -58,6 +72,8 @@ public class GameActivity
                 && savedInstanceState.getBoolean(STATE_RESOLVING_ERROR, false);
 
         setContentView(R.layout.activity_game);
+
+        onShowLoading();
 
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addScope(Games.SCOPE_GAMES)
@@ -77,14 +93,6 @@ public class GameActivity
     protected void onDestroy() {
         super.onDestroy();
         ViewServer.get(this).removeWindow(this);
-    }
-
-    private void onShowLobby() {
-        Fragment frag = getSupportFragmentManager().findFragmentByTag(FRAG_LOBBY);
-        if (frag == null)
-            frag = LobbyFragment.newInstance();
-
-        fragReplace(frag, FRAG_LOBBY, false);
     }
 
     private void fragReplace(Fragment frag, final String tag, final boolean addToBackStack) {
@@ -124,7 +132,7 @@ public class GameActivity
     @Override
     public void onConnected(final Bundle bundle) {
         Log.d(TAG, "connected -> %s", bundle);
-        onShowLobby();
+        onLoadComplete();
     }
 
     @Override
@@ -176,6 +184,63 @@ public class GameActivity
     }
 
     @Override
+    public void saveMatch(final String matchId, final World world) {
+        final byte[] data = world.serialize();
+
+        if (data == null)
+            return;
+
+        try {
+            final FileOutputStream out = openFileOutput(matchId, MODE_PRIVATE);
+            BufferedOutputStream bout = new BufferedOutputStream(out);
+            bout.write(data);
+        } catch (Exception e) {
+            Log.e(TAG, "error saving match", e);
+        }
+    }
+
+    @Override
+    public World loadMatch(final String matchId) {
+        try {
+            final FileInputStream in = openFileInput(matchId);
+            final BufferedInputStream bin = new BufferedInputStream(in);
+
+            final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+            int nRead;
+            byte[] data = new byte[16384];
+
+            while ((nRead = bin.read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+
+            buffer.flush();
+
+            return World.unserialize(buffer.toByteArray());
+        } catch (Exception e) {
+            Log.e(TAG, "error loading match", e);
+        }
+
+        return null;
+    }
+
+    private void onShowLobby() {
+        Fragment frag = getSupportFragmentManager().findFragmentByTag(FRAG_LOBBY);
+        if (frag == null)
+            frag = LobbyFragment.newInstance();
+
+        fragReplace(frag, FRAG_LOBBY, false);
+    }
+
+    private void onShowLoading() {
+        Fragment frag = getSupportFragmentManager().findFragmentByTag(FRAG_LOADING);
+        if (frag == null)
+            frag = LoadingFragment.newInstance();
+
+        fragReplace(frag, FRAG_LOADING, false);
+    }
+
+    @Override
     public void openMatch(final TurnBasedMatch match) {
         final String tag = FRAG_GAME + match.getMatchId();
         Fragment frag = getSupportFragmentManager().findFragmentByTag(tag);
@@ -184,9 +249,15 @@ public class GameActivity
         fragReplace(frag, tag, true);
     }
 
+    private void onLoadComplete() {
+        if (mTileSet != null && mPlayer != null && mGoogleApiClient.isConnected())
+            onShowLobby();
+    }
+
     @Override
     public void onTileSetLoaded(final TileSet tileSet) {
         mTileSet = tileSet;
+        onLoadComplete();
     }
 
     @Override
@@ -202,6 +273,7 @@ public class GameActivity
     @Override
     public void onPlayerLoaded(final Player player) {
         mPlayer = player;
+        onLoadComplete();
     }
 
     /* A fragment to display an error dialog */

@@ -6,6 +6,7 @@ import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.GestureDetectorCompat;
@@ -49,6 +50,9 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
         Player getPlayer();
         TileSet getTileSet();
         GoogleApiClient getApiClient();
+
+        void saveMatch(String matchId, World world);
+        World loadMatch(String matchId);
     }
 
     Listener mListener;
@@ -93,18 +97,47 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         final Bundle args = getArguments();
-
-        mGestureDetector = new GestureDetectorCompat(getActivity(), mGestureListener);
-
         mMatch = args.getParcelable("match");
-        mWorld = World.getInstance(mMatch);
+        mGestureDetector = new GestureDetectorCompat(getActivity(), mGestureListener);
+        mViewConfiguration = ViewConfiguration.get(getActivity());
+    }
+
+    private void genesis () {
+
+        World lastWorld = null;
+        final byte[] data = mMatch.getData();
+        if (data == null || data.length == 0) {
+            mWorld = World.generate();
+        } else {
+            lastWorld = mListener.loadMatch(mMatch.getMatchId());
+            mWorld = World.unserialize(data);
+        }
+
         mWorld.setOrder(mMatch.getParticipantIds());
 
         final String playerId = Games.Players.getCurrentPlayerId(mListener.getApiClient());
         final String participantId = mMatch.getParticipantId(playerId);
         mWorld.join(participantId, mListener.getPlayer());
 
-        mViewConfiguration = ViewConfiguration.get(getActivity());
+        if (lastWorld != null)
+            mWorldView.setInitialWorld(lastWorld);
+
+        mWorldView.post(new Runnable() {
+            @Override
+            public void run() {
+                mWorldView.setWorld(mWorld);
+            }
+        });
+    }
+
+    private void doGenesis() {
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(final Void... params) {
+                genesis();
+                return null;
+            }
+        }.execute();
     }
 
     @Override
@@ -112,8 +145,9 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
         final View view = inflater.inflate(R.layout.fragment_match, container, false);
 
         mWorldView = (WorldView) view.findViewById(R.id.world);
-        mWorldView.setWorld(mWorld);
         mWorldView.setTileSet(mListener.getTileSet());
+
+        doGenesis();
 
         mGestureView = (GestureView)view.findViewById(R.id.gesture_view);
 
@@ -284,6 +318,8 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
 
         Games.TurnBasedMultiplayer.takeTurn(mListener.getApiClient(), mMatch.getMatchId(), mWorld.serialize(), nextParticipantId);
 
+        mListener.saveMatch(mMatch.getMatchId(), mWorld);
+
         onTheirTurn();
     }
 
@@ -354,7 +390,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
         Log.d(TAG, "cast %s!!!", spell.getName());
         showCoverText(spell.getName());
         clearIncantation();
-        mWorld.castSpell(spell);
+        mWorld.castSpell(mListener.getPlayer(), spell, mSelectedEntity);
     }
 
     private void enableWorld() {
@@ -449,7 +485,7 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
 
         if (entity != null &&
                 !(entity instanceof World.PlayerEntity &&
-                        ((World.PlayerEntity)entity).getPlayer().uuid.equals(mListener.getPlayer().uuid))) {
+                        ((World.PlayerEntity)entity).getPlayer().equals(mListener.getPlayer()))) {
             onShowEntity(entity);
         }
     }

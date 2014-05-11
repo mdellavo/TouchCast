@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.os.AsyncTask;
 
@@ -29,6 +30,7 @@ public class TileSet {
     private final Paint mPaint;
 
     private Map<String, Rect> mTiles = new HashMap<String, Rect>();
+
 
     public interface LoadListener {
         void onTileSetLoaded(TileSet tileSet);
@@ -91,6 +93,22 @@ public class TileSet {
         drawTile(canvas, e.getTile(), e.getX(), e.getY());
     }
 
+    public void drawTile(final Canvas canvas, final String tile, final PointF position) {
+        final Rect rect = mTiles.get(tile);
+        if (tile != null) {
+            mSrc.set(rect);
+            mDst.set(
+                    Math.round(position.x * mSize),
+                    Math.round(position.y*mSize),
+                    Math.round((position.x + 1) * mSize),
+                    Math.round((position.y + 1) * mSize)
+            );
+            //Log.d(TAG, "(x,y)=%s,%s | src=%s %sx%s | dst=%s %sx%s", x, y, mSrc, mSrc.width(), mSrc.height(), mDst, mDst.width(), mDst.height());
+            canvas.drawBitmap(mBitmap, mSrc, mDst, mPaint);
+        }
+
+    }
+
     public static void load(final Context context, final String path, final int tileSize, final LoadListener listener) {
         final AsyncTask<Void, Void, Bitmap> task = new AsyncTask<Void, Void, Bitmap>() {
 
@@ -133,7 +151,7 @@ public class TileSet {
                 tileSet.setTile("selector", 65, 1);
                 tileSet.setTile("target", 105, 1);
                 tileSet.setTile("beast-orange", 39, 14);
-
+                tileSet.setTile("spell", 59, 1);
 
                 if (listener != null)
                     listener.onTileSetLoaded(tileSet);
