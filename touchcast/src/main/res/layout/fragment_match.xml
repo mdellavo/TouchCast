@@ -76,11 +76,6 @@
             android:layerType="software"
             />
 
-        <org.quuux.touchcast.ui.GestureView
-            android:id="@+id/gesture_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-
         <TextView
             android:id="@+id/cover_text"
             android:layout_width="wrap_content"
@@ -88,13 +83,20 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:textSize="29sp"
-            android:textColor="@android:color/white"
+            android:textColor="#44ffffff"
             android:shadowColor="@android:color/black"
             android:visibility="gone"
             android:shadowRadius="25"
             android:shadowDx="5"
             android:shadowDy="5"
             />
+
+        <org.quuux.touchcast.ui.GestureView
+            android:id="@+id/gesture_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+
 
     </FrameLayout>
 

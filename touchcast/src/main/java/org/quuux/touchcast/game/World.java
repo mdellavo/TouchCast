@@ -1,7 +1,5 @@
 package org.quuux.touchcast.game;
 
-import android.graphics.Point;
-
 import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMatch;
 
 import org.quuux.touchcast.Log;
@@ -25,7 +23,8 @@ public class World implements Serializable {
 
     private static final String TAG = Log.buildTag(World.class);
 
-    enum Position {
+    public enum Position {
+
         N(0, 1),
         NE(1, 1),
         E(1, 0),
@@ -122,10 +121,22 @@ public class World implements Serializable {
         }
     }
 
+    public interface Action {
+
+    }
+
+    class SpellAction implements Action {
+        private final Spell mSpell;
+
+        public SpellAction(final Spell spell) {
+            mSpell = spell;
+        }
+    }
 
     Map<String, Player> mPlayers = new HashMap<String, Player>();
     List<String> mParticipantOrder = new ArrayList<String>();
     List<Entity> mEntities = new ArrayList<Entity>();
+    List<Action> mActionJournal = new ArrayList<Action>();
 
     WorldMap mMap;
     Random mRandom = new Random();
@@ -215,7 +226,6 @@ public class World implements Serializable {
             final PlayerEntity playerEntity = new PlayerEntity(player);
             placeEntity(playerEntity);
             mEntities.add(playerEntity);
-
         }
     }
 
@@ -264,5 +274,9 @@ public class World implements Serializable {
         return null;
     }
 
+    public void castSpell(final Spell spell) {
+        final SpellAction action = new SpellAction(spell);
+        mActionJournal.add(action);
+    }
 
 }

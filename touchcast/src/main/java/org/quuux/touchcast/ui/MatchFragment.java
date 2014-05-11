@@ -29,6 +29,7 @@ import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMatch;
 import org.quuux.touchcast.Log;
 import org.quuux.touchcast.R;
 import org.quuux.touchcast.game.Player;
+import org.quuux.touchcast.game.Spell;
 import org.quuux.touchcast.game.World;
 import org.quuux.touchcast.util.TileSet;
 import org.quuux.touchcast.util.Utils;
@@ -343,12 +344,17 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
             final Spell spell = checkCast();
 
             if (spell != null) {
-                Log.d(TAG, "cast %s!!!", spell.name);
-                showCoverText(spell.name);
-                clearIncantation();
+                onSpellCast(spell);
             }
         }
 
+    }
+
+    private void onSpellCast(final Spell spell) {
+        Log.d(TAG, "cast %s!!!", spell.getName());
+        showCoverText(spell.getName());
+        clearIncantation();
+        mWorld.castSpell(spell);
     }
 
     private void enableWorld() {
@@ -414,8 +420,8 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
 
         playerName.setText(entity.getName());
         mPopupWindow = new PopupWindow(getActivity());
-        mPopupWindow.setHeight(Utils.dpToPx(getActivity(), 96));
-        mPopupWindow.setWidth(Utils.dpToPx(getActivity(), 256));
+        mPopupWindow.setHeight(Utils.dpToPx(getActivity(), 64));
+        mPopupWindow.setWidth(Utils.dpToPx(getActivity(), 196));
         mPopupWindow.setContentView(view);
         mPopupWindow.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#44333333")));
         mPopupWindow.setAnimationStyle(R.style.PopupAnimation);
@@ -423,11 +429,15 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
         final TileSet tileset = mListener.getTileSet();
         final Point translation = mWorldView.getMapTranslation();
         final float scale = mWorldView.getMapScale();
+
+        final int[] offset = new int[2];
+        mWorldView.getLocationOnScreen(offset);
+
         mPopupWindow.showAtLocation(
                 mWorldView,
-                Gravity.NO_GRAVITY,
-                Math.round(tileset.getTileSize() * entity.getX() * scale) + translation.x,
-                Math.round(tileset.getTileSize() * entity.getY() * scale) + translation.y
+                Gravity.TOP | Gravity.LEFT,
+                offset[0],
+                offset[1]
         );
 
         Log.d(TAG, "popup = %s", mPopupWindow);
@@ -551,14 +561,6 @@ public class MatchFragment extends Fragment implements View.OnTouchListener, Vie
             for (String gesture : mGestures)
                 rv = rv * 31 + gesture.hashCode();
             return rv;
-        }
-    }
-
-    class Spell {
-        final String name;
-
-        public Spell(final String name) {
-            this.name = name;
         }
     }
 
